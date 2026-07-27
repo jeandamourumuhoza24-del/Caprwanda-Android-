@@ -1,0 +1,46 @@
+
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Verify Gradle Wrapper
+        run: |
+          test -f gradlew || (echo "Missing gradlew" && exit 1)
+          test -f gradle/wrapper/gradle-wrapper.properties || (echo "Missing gradle-wrapper.properties" && exit 1)
+          chmod +x gradlew
+
+      - name: Build Debug APK
+        run: ./gradlew assembleDebug --stacktrace --no-daemon
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: CapRwanda-Debug-APK
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14gradlew
+gradlew.bat
+gradle/wrapper/gradle-wrapper.jar
+gradle/wrapper/gradle-wrapper.properties
+settings.gradle.kts
+build.gradle.kts
+app/build.gradle.kts
+app/src/...

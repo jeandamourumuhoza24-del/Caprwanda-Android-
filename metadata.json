@@ -1,0 +1,6 @@
+{
+  "name": "CapRwanda",
+  "description": "CapRwanda is a complete Android video editing app with multi-track timeline, AI captions, filters, speed, audio recorder, green screen, and 4K export.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

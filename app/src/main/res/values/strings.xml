@@ -1,0 +1,21 @@
+<resources>
+    <string name="app_name">CapRwanda</string>
+    <string name="home_title">CapRwanda</string>
+    <string name="new_project">New Project</string>
+    <string name="recent_projects">Recent Projects</string>
+    <string name="trending_templates">Rwanda Templates</string>
+    <string name="import_video">Import Video</string>
+    <string name="export_video">Export Video</string>
+    <string name="settings">Settings</string>
+    <string name="timeline">Timeline</string>
+    <string name="effects">Effects &amp; Filters</string>
+    <string name="transitions">Transitions</string>
+    <string name="text_titles">Text &amp; Titles</string>
+    <string name="audio">Audio &amp; Voice</string>
+    <string name="stickers">Stickers</string>
+    <string name="ai_tools">AI Features</string>
+    <string name="auto_captions">Auto Captions</string>
+    <string name="bg_removal">AI Background Removal</string>
+    <string name="green_screen">Chroma Key Green Screen</string>
+    <string name="object_removal">Object Removal</string>
+</resources>

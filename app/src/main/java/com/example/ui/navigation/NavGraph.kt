@@ -47,8 +47,8 @@ fun CapRwandaNavGraph(
             VideoImportScreen(
                 onProjectCreated = { projId -> navController.navigate(Screen.TimelineEditor.createRoute(projId)) },
                 onBackClick = { navController.popBackStack() },
-                onCreateProject = { title, aspect ->
-                    homeVm.createProject(title) { newProjId ->
+                onCreateProject = { title, aspect, items ->
+                    homeVm.createProjectWithClips(title, aspect, items) { newProjId ->
                         navController.navigate(Screen.TimelineEditor.createRoute(newProjId))
                     }
                 }

@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.Image
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -35,17 +36,31 @@ fun ExportScreen(
     val fps by viewModel.selectedFps.collectAsStateWithLifecycle()
     val format by viewModel.selectedFormat.collectAsStateWithLifecycle()
     val exportState by viewModel.exportState.collectAsStateWithLifecycle()
+    val imageSaveMessage by viewModel.imageSaveMessage.collectAsStateWithLifecycle()
 
     val resolutions = listOf("720p", "1080p", "4K")
     val fpsOptions = listOf(30, 60)
 
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(imageSaveMessage) {
+        imageSaveMessage?.let { msg ->
+            snackbarHostState.showSnackbar(
+                message = msg,
+                duration = SnackbarDuration.Short
+            )
+            viewModel.clearImageSaveMessage()
+        }
+    }
+
     Scaffold(
         topBar = {
             CapRwandaTopBar(
-                title = "Export Video",
+                title = "Export Media Studio",
                 onBackClick = onBackClick
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         Column(
@@ -181,18 +196,40 @@ fun ExportScreen(
             Spacer(modifier = Modifier.weight(1f))
 
             if (!exportState.isExporting && !exportState.isCompleted) {
-                Button(
-                    onClick = { viewModel.startExporting() },
-                    colors = ButtonDefaults.buttonColors(containerColor = CyanAccent),
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp)
-                        .testTag("start_export_button")
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Icon(Icons.Default.Download, contentDescription = null, tint = Color.Black)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Export MP4 Video", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    // 1. Export as Video (MP4)
+                    Button(
+                        onClick = { viewModel.startExporting() },
+                        colors = ButtonDefaults.buttonColors(containerColor = CyanAccent),
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp)
+                            .testTag("start_export_button")
+                    ) {
+                        Icon(Icons.Default.Download, contentDescription = null, tint = Color.Black)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Export MP4 Video", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    }
+
+                    // 2. Save Edited Image / Current Frame (Save edited images)
+                    OutlinedButton(
+                        onClick = { viewModel.saveEditedImage() },
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = RwandaGold),
+                        border = androidx.compose.foundation.BorderStroke(1.dp, RwandaGold),
+                        shape = RoundedCornerShape(16.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp)
+                            .testTag("save_image_button")
+                    ) {
+                        Icon(Icons.Default.Image, contentDescription = null, tint = RwandaGold)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Save Edited Image Frame", color = RwandaGold, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                    }
                 }
             }
         }

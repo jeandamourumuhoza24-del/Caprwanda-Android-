@@ -19,6 +19,14 @@ class VideoProjectRepository(
     val allTemplates: Flow<List<TemplateEntity>> = templateDao.getAllTemplates()
 
     suspend fun createNewProject(title: String = "Rwanda Reel", aspectRatio: String = "9:16"): Long {
+        return createNewProjectWithClips(title, aspectRatio, emptyList())
+    }
+
+    suspend fun createNewProjectWithClips(
+        title: String = "Rwanda Reel",
+        aspectRatio: String = "9:16",
+        mediaItems: List<Triple<String, String, Boolean>> // Triple<mediaUri, title, isImage>
+    ): Long {
         val project = ProjectEntity(
             title = title,
             aspectRatio = aspectRatio,
@@ -26,20 +34,41 @@ class VideoProjectRepository(
         )
         val projectId = projectDao.insertProject(project)
         
-        // Add an initial sample video clip
-        val sampleClip = ClipEntity(
-            projectId = projectId,
-            trackType = TrackType.VIDEO,
-            trackIndex = 0,
-            mediaUri = "sample_rwanda_landscape.mp4",
-            title = "Intro Landscape",
-            startTimeMs = 0,
-            endTimeMs = 5000,
-            sourceTrimStartMs = 0,
-            sourceTrimEndMs = 5000,
-            filterName = "Rwandan Dawn"
-        )
-        clipDao.insertClip(sampleClip)
+        if (mediaItems.isEmpty()) {
+            // Add an initial sample video clip
+            val sampleClip = ClipEntity(
+                projectId = projectId,
+                trackType = TrackType.VIDEO,
+                trackIndex = 0,
+                mediaUri = "sample_rwanda_landscape.mp4",
+                title = "Intro Landscape",
+                startTimeMs = 0,
+                endTimeMs = 5000,
+                sourceTrimStartMs = 0,
+                sourceTrimEndMs = 5000,
+                filterName = "Rwandan Dawn"
+            )
+            clipDao.insertClip(sampleClip)
+        } else {
+            var currentStartTime = 0L
+            mediaItems.forEach { (uri, name, isImg) ->
+                val duration = 5000L // 5 seconds default duration
+                val clip = ClipEntity(
+                    projectId = projectId,
+                    trackType = TrackType.VIDEO,
+                    trackIndex = 0,
+                    mediaUri = uri,
+                    title = name,
+                    startTimeMs = currentStartTime,
+                    endTimeMs = currentStartTime + duration,
+                    sourceTrimStartMs = 0,
+                    sourceTrimEndMs = duration,
+                    isImage = isImg
+                )
+                clipDao.insertClip(clip)
+                currentStartTime += duration
+            }
+        }
         return projectId
     }
 

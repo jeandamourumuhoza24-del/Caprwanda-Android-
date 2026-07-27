@@ -210,6 +210,8 @@ fun TimelineEditorScreen(
                                     onFlip = { selectedClip?.let { viewModel.flipClipHorizontal(it) } },
                                     onSpeedChange = { speed -> selectedClip?.let { viewModel.updateClipSpeed(it, speed) } },
                                     onReverseToggle = { selectedClip?.let { viewModel.toggleReverseClip(it) } },
+                                    onTrimChange = { start, end -> selectedClip?.let { viewModel.updateClipTrim(it, start, end) } },
+                                    onCropChange = { w, h -> selectedClip?.let { viewModel.updateClipCrop(it, w, h) } },
                                     onClose = { viewModel.closeSheetTool() }
                                 )
                             }
@@ -250,11 +252,13 @@ fun TimelineEditorScreen(
                             }
                             BottomSheetTool.AI_TOOLS -> {
                                 AiToolsSheet(
+                                    clip = selectedClip,
                                     isAiLoading = isAiLoading,
                                     aiStatusMessage = aiMessage,
                                     onRunAutoCaptions = { viewModel.runAutoCaptions(it) },
                                     onToggleBgRemoval = { viewModel.toggleAiBackgroundRemoval() },
                                     onToggleChromaKey = { viewModel.toggleChromaKey(it) },
+                                    onUpdateBgReplacement = { type, color, image -> viewModel.updateBgReplacement(type, color, image) },
                                     onClose = { viewModel.closeSheetTool() }
                                 )
                             }

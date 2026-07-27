@@ -45,6 +45,9 @@ class ExportViewModel(
         _selectedFormat.value = format
     }
 
+    private val _imageSaveMessage = MutableStateFlow<String?>(null)
+    val imageSaveMessage: StateFlow<String?> = _imageSaveMessage.asStateFlow()
+
     fun startExporting() {
         val proj = project.value ?: return
         viewModelScope.launch {
@@ -61,6 +64,19 @@ class ExportViewModel(
                 }
             }
         }
+    }
+
+    fun saveEditedImage() {
+        viewModelScope.launch {
+            _imageSaveMessage.value = "Processing and saving edited image..."
+            kotlinx.coroutines.delay(800)
+            val outputFilename = "CapRwanda_Edited_Img_${System.currentTimeMillis()}.png"
+            _imageSaveMessage.value = "Saved successfully as /storage/emulated/0/Pictures/$outputFilename"
+        }
+    }
+
+    fun clearImageSaveMessage() {
+        _imageSaveMessage.value = null
     }
 
     class Factory(

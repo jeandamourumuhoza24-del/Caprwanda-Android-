@@ -1,5 +1,7 @@
 package com.example.ui.components
 
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -14,13 +16,15 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -31,6 +35,9 @@ import com.example.data.local.entities.TrackType
 import com.example.ui.theme.CyanAccent
 import com.example.ui.theme.RwandaGold
 import com.example.ui.theme.SlateDarkCard
+import com.example.ui.theme.SlateDarkSurface
+import java.io.InputStream
+import java.lang.Exception
 
 @Composable
 fun VideoPreviewPlayer(
@@ -42,6 +49,7 @@ fun VideoPreviewPlayer(
     onTogglePlayPause: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     val aspectValue = when (aspectRatio) {
         "16:9" -> 16f / 9f
         "1:1" -> 1f
@@ -78,62 +86,131 @@ fun VideoPreviewPlayer(
                 .clickable { onTogglePlayPause() },
             contentAlignment = Alignment.Center
         ) {
-            // Simulated video content canvas
+            // Interactive Video Frame & AI Segmentation Canvas Player
             Canvas(modifier = Modifier.fillMaxSize()) {
                 val canvasWidth = size.width
                 val canvasHeight = size.height
 
-                // Background grade color based on active filter
-                val filterColor = when (activeVideoClip?.filterName) {
-                    "Cinematic" -> Color(0xFF0F172A)
-                    "Rwandan Dawn" -> Color(0xFF451A03)
-                    "Vibrant" -> Color(0xFF064E3B)
-                    "Vintage Sepia" -> Color(0xFF422006)
-                    "Noir B&W" -> Color(0xFF18181B)
-                    "Warm Sunset" -> Color(0xFF7C2D12)
-                    else -> Color(0xFF1E293B)
+                // Draw background depending on whether AI Background Removal is active
+                if (activeVideoClip?.isAiBgRemoved == true) {
+                    when (activeVideoClip.bgReplacementType) {
+                        "transparent" -> {
+                            // Render professional dark checkered pattern
+                            val numCols = 16
+                            val numRows = (canvasHeight / (canvasWidth / numCols)).toInt().coerceAtLeast(16)
+                            val sqSize = canvasWidth / numCols
+                            for (row in 0 until numRows) {
+                                for (col in 0 until numCols) {
+                                    val isDark = (row + col) % 2 == 0
+                                    drawRect(
+                                        color = if (isDark) Color(0xFF1E293B) else Color(0xFF0F172A),
+                                        topLeft = androidx.compose.ui.geometry.Offset(col * sqSize, row * sqSize),
+                                        size = androidx.compose.ui.geometry.Size(sqSize, sqSize)
+                                    )
+                                }
+                            }
+                        }
+                        "color" -> {
+                            // Render solid color background
+                            var col = Color.Transparent
+                            try {
+                                col = Color(android.graphics.Color.parseColor(activeVideoClip.bgSolidColorHex))
+                            } catch (e: Exception) {
+                                col = Color.Black
+                            }
+                            drawRect(color = col)
+                        }
+                        "image" -> {
+                            // Render user-selected background image or nice gradient scene representing custom background
+                            drawRect(
+                                brush = androidx.compose.ui.graphics.Brush.linearGradient(
+                                    colors = listOf(Color(0xFF3B82F6), Color(0xFF1E3A8A))
+                                )
+                            )
+                            // Draw sun or secondary elements representing background image
+                            drawCircle(
+                                color = Color(0xFFFBBF24).copy(alpha = 0.6f),
+                                radius = canvasWidth * 0.15f,
+                                center = androidx.compose.ui.geometry.Offset(canvasWidth * 0.8f, canvasHeight * 0.2f)
+                            )
+                        }
+                        else -> {
+                            drawRect(color = Color.Black)
+                        }
+                    }
+                } else {
+                    // Regular Mode (Background not removed)
+                    val filterColor = when (activeVideoClip?.filterName) {
+                        "Cinematic" -> Color(0xFF0F172A)
+                        "Rwandan Dawn" -> Color(0xFF451A03)
+                        "Vibrant" -> Color(0xFF064E3B)
+                        "Vintage Sepia" -> Color(0xFF422006)
+                        "Noir B&W" -> Color(0xFF18181B)
+                        "Warm Sunset" -> Color(0xFF7C2D12)
+                        else -> Color(0xFF1E293B)
+                    }
+                    drawRect(color = filterColor)
+
+                    // Draw the normal background scene (hills) since background is not removed!
+                    drawPath(
+                        path = androidx.compose.ui.graphics.Path().apply {
+                            moveTo(0f, canvasHeight * 0.7f)
+                            quadraticTo(
+                                canvasWidth * 0.25f, canvasHeight * 0.55f,
+                                canvasWidth * 0.5f, canvasHeight * 0.7f
+                            )
+                            quadraticTo(
+                                canvasWidth * 0.75f, canvasHeight * 0.85f,
+                                canvasWidth, canvasHeight * 0.65f
+                            )
+                            lineTo(canvasWidth, canvasHeight)
+                            lineTo(0f, canvasHeight)
+                            close()
+                        },
+                        color = Color(0xFF047857) // Rwandan green hills background
+                    )
                 }
 
-                drawRect(color = filterColor)
+                // Now, render the foreground isolated subject in the center
+                // Draw AI segmentation mask outline if background removal is enabled
+                val subjectColor = if (activeVideoClip?.isChromaKeyEnabled == true) Color(0xFF0284C7) else Color(0xFF38BDF8)
 
-                // Simulated video frame subject (mountains/hills of Rwanda)
+                // Draw simulated human silhouette subject in the center
                 drawCircle(
-                    color = if (activeVideoClip?.isChromaKeyEnabled == true) Color(0xFF0284C7) else Color(0xFF38BDF8),
-                    radius = canvasWidth * 0.25f,
-                    center = androidx.compose.ui.geometry.Offset(canvasWidth * 0.5f, canvasHeight * 0.45f)
+                    color = subjectColor,
+                    radius = canvasWidth * 0.22f,
+                    center = androidx.compose.ui.geometry.Offset(canvasWidth * 0.5f, canvasHeight * 0.42f)
                 )
-
-                // Rolling Hills horizon
+                // Draw shoulders/body for the silhouette
                 drawPath(
                     path = androidx.compose.ui.graphics.Path().apply {
-                        moveTo(0f, canvasHeight * 0.7f)
+                        moveTo(canvasWidth * 0.25f, canvasHeight * 0.75f)
                         quadraticTo(
-                            canvasWidth * 0.25f, canvasHeight * 0.55f,
-                            canvasWidth * 0.5f, canvasHeight * 0.7f
+                            canvasWidth * 0.5f, canvasHeight * 0.52f,
+                            canvasWidth * 0.75f, canvasHeight * 0.75f
                         )
-                        quadraticTo(
-                            canvasWidth * 0.75f, canvasHeight * 0.85f,
-                            canvasWidth, canvasHeight * 0.65f
-                        )
-                        lineTo(canvasWidth, canvasHeight)
-                        lineTo(0f, canvasHeight)
+                        lineTo(canvasWidth * 0.75f, canvasHeight)
+                        lineTo(canvasWidth * 0.25f, canvasHeight)
                         close()
                     },
-                    color = if (activeVideoClip?.isAiBgRemoved == true) Color(0xFF10B981) else Color(0xFF047857)
+                    color = subjectColor
                 )
 
-                // AI Background Removal outline indicator
-                if (activeVideoClip?.isAiBgRemoved == true) {
-                    drawCircle(
-                        color = CyanAccent,
-                        radius = canvasWidth * 0.27f,
-                        center = androidx.compose.ui.geometry.Offset(canvasWidth * 0.5f, canvasHeight * 0.45f),
-                        style = Stroke(width = 4f)
-                    )
+                // Render crop guides or rotations if custom edits are applied
+                if (activeVideoClip != null) {
+                    if (activeVideoClip.isAiBgRemoved) {
+                        // AI Cutout selection border / tracking outline
+                        drawCircle(
+                            color = CyanAccent,
+                            radius = canvasWidth * 0.24f,
+                            center = androidx.compose.ui.geometry.Offset(canvasWidth * 0.5f, canvasHeight * 0.42f),
+                            style = Stroke(width = 3f)
+                        )
+                    }
                 }
             }
 
-            // Text Overlays
+            // Text Overlays (High Density Subtitles)
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -164,7 +241,9 @@ fun VideoPreviewPlayer(
                 Text(
                     text = stickerClip.stickerSymbol,
                     fontSize = 36.sp,
-                    modifier = Modifier.align(Alignment.TopCenter).padding(top = 24.dp)
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 24.dp)
                 )
             }
 
@@ -214,7 +293,7 @@ fun VideoPreviewPlayer(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "AI TRACKING ACTIVE",
+                        text = if (activeVideoClip?.isAiBgRemoved == true) "AI BG REMOVED" else "AI TRACKING ACTIVE",
                         color = Color.White,
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Bold

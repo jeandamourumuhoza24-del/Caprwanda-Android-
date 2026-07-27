@@ -67,6 +67,10 @@ data class ClipEntity(
     
     // AI Features
     val isAiBgRemoved: Boolean = false,
+    val bgReplacementType: String = "transparent", // transparent, color, image
+    val bgSolidColorHex: String = "#00000000",
+    val bgImageUri: String = "",
+    val isImage: Boolean = false,
     val isChromaKeyEnabled: Boolean = false,
     val chromaKeyColorHex: String = "#00FF00", // Green screen
     val chromaKeyTolerance: Float = 0.3f,

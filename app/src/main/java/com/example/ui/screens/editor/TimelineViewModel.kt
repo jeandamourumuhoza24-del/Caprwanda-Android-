@@ -127,6 +127,27 @@ class TimelineViewModel(
         }
     }
 
+    fun updateClipTrim(clip: ClipEntity, trimStartMs: Long, trimEndMs: Long) {
+        val duration = trimEndMs - trimStartMs
+        if (duration < 500) return
+        viewModelScope.launch {
+            repository.updateClip(clip.copy(
+                sourceTrimStartMs = trimStartMs,
+                sourceTrimEndMs = trimEndMs,
+                endTimeMs = clip.startTimeMs + duration
+            ))
+        }
+    }
+
+    fun updateClipCrop(clip: ClipEntity, cropWidth: Float, cropHeight: Float) {
+        viewModelScope.launch {
+            repository.updateClip(clip.copy(
+                cropWidth = cropWidth,
+                cropHeight = cropHeight
+            ))
+        }
+    }
+
     fun toggleReverseClip(clip: ClipEntity) {
         viewModelScope.launch {
             repository.updateClip(clip.copy(isReversed = !clip.isReversed))
@@ -309,9 +330,22 @@ class TimelineViewModel(
             _aiStatusMessage.value = "Segmenting video subject from background..."
             delay(1000)
             
-            repository.updateClip(target.copy(isAiBgRemoved = !target.isAiBgRemoved))
+            val newState = !target.isAiBgRemoved
+            repository.updateClip(target.copy(isAiBgRemoved = newState))
             _isAiLoading.value = false
-            _aiStatusMessage.value = if (!target.isAiBgRemoved) "AI Subject Segmentation Applied!" else "Background restored"
+            _aiStatusMessage.value = if (newState) "AI Subject Segmentation Applied!" else "Background restored"
+        }
+    }
+
+    fun updateBgReplacement(type: String, colorHex: String = "#00000000", imageUri: String = "") {
+        val clipId = _selectedClipId.value ?: return
+        viewModelScope.launch {
+            val target = clips.value.find { it.id == clipId } ?: return@launch
+            repository.updateClip(target.copy(
+                bgReplacementType = type,
+                bgSolidColorHex = colorHex,
+                bgImageUri = imageUri
+            ))
         }
     }
 

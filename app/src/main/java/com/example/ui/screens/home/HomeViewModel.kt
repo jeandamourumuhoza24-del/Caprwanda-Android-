@@ -42,6 +42,18 @@ class HomeViewModel(
         }
     }
 
+    fun createProjectWithClips(
+        title: String,
+        aspectRatio: String,
+        mediaItems: List<Triple<String, String, Boolean>>,
+        onCreated: (Long) -> Unit
+    ) {
+        viewModelScope.launch {
+            val projectId = repository.createNewProjectWithClips(title, aspectRatio, mediaItems)
+            onCreated(projectId)
+        }
+    }
+
     fun deleteProject(projectId: Long) {
         viewModelScope.launch {
             repository.deleteProject(projectId)

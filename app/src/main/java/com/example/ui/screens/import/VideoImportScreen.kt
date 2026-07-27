@@ -1,5 +1,8 @@
 package com.example.ui.screens.import
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -18,6 +21,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -32,27 +36,63 @@ data class ImportMediaItem(
     val id: String,
     val title: String,
     val durationText: String,
-    val uri: String
+    val uri: String,
+    val isImage: Boolean = false
 )
 
 @Composable
 fun VideoImportScreen(
     onProjectCreated: (Long) -> Unit,
     onBackClick: () -> Unit,
-    onCreateProject: (title: String, aspectRatio: String) -> Unit
+    onCreateProject: (title: String, aspectRatio: String, mediaItems: List<Triple<String, String, Boolean>>) -> Unit
 ) {
+    val context = LocalContext.current
     var projectTitle by remember { mutableStateOf("Rwanda Vlog Video") }
     var selectedAspectRatio by remember { mutableStateOf("9:16") }
-    var selectedItems by remember { mutableStateOf(setOf("v1", "v2")) }
 
-    val mediaGallery = remember {
-        listOf(
-            ImportMediaItem("v1", "Kigali Horizon Drive", "0:15", "media_rw_1.mp4"),
-            ImportMediaItem("v2", "Nyungwe Canopy Walk", "0:25", "media_rw_2.mp4"),
-            ImportMediaItem("v3", "Musanze Cave Trek", "0:18", "media_rw_3.mp4"),
-            ImportMediaItem("v4", "Gisenyi Beach Sunset", "0:30", "media_rw_4.mp4")
+    // Initial gallery with simulated items + custom picked items
+    var mediaGallery by remember {
+        mutableStateOf(
+            listOf(
+                ImportMediaItem("v1", "Kigali Horizon Drive", "0:15", "media_rw_1.mp4"),
+                ImportMediaItem("v2", "Nyungwe Canopy Walk", "0:25", "media_rw_2.mp4"),
+                ImportMediaItem("v3", "Musanze Cave Trek", "0:18", "media_rw_3.mp4"),
+                ImportMediaItem("v4", "Gisenyi Beach Sunset", "0:30", "media_rw_4.mp4")
+            )
         )
     }
+
+    var selectedItems by remember { mutableStateOf(setOf("v1", "v2")) }
+
+    // Activity launcher for Android Photo Picker (supports multiple images and videos)
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickMultipleVisualMedia(),
+        onResult = { uris ->
+            if (uris.isNotEmpty()) {
+                val newItems = uris.mapIndexed { index, uri ->
+                    val uriStr = uri.toString()
+                    val isImage = uriStr.contains("image") ||
+                                  uriStr.endsWith(".jpg") ||
+                                  uriStr.endsWith(".png") ||
+                                  uriStr.endsWith(".jpeg") ||
+                                  uriStr.endsWith(".webp") ||
+                                  (context.contentResolver.getType(uri)?.startsWith("image/") == true)
+
+                    val typePrefix = if (isImage) "IMG" else "VID"
+                    val id = "picked_${System.currentTimeMillis()}_$index"
+                    ImportMediaItem(
+                        id = id,
+                        title = "Gallery $typePrefix ${index + 1}",
+                        durationText = if (isImage) "0:05" else "0:05",
+                        uri = uriStr,
+                        isImage = isImage
+                    )
+                }
+                mediaGallery = mediaGallery + newItems
+                selectedItems = selectedItems + newItems.map { it.id }.toSet()
+            }
+        }
+    )
 
     val aspectRatios = listOf("9:16", "16:9", "1:1", "4:5")
 
@@ -114,7 +154,14 @@ fun VideoImportScreen(
                 Card(
                     colors = CardDefaults.cardColors(containerColor = SlateDarkSurface),
                     shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier
+                        .weight(1f)
+                        .clickable {
+                            // Launch Photo Picker to choose videos and images
+                            photoPickerLauncher.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)
+                            )
+                        }
                 ) {
                     Row(
                         modifier = Modifier.padding(12.dp),
@@ -122,7 +169,7 @@ fun VideoImportScreen(
                     ) {
                         Icon(Icons.Default.VideoLibrary, contentDescription = null, tint = CyanAccent)
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Gallery Clips", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        Text("Add Gallery", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 13.sp)
                     }
                 }
 
@@ -144,7 +191,7 @@ fun VideoImportScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            Text("Select Video Clips (${selectedItems.size} selected)", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.White)
+            Text("Select Video & Image Clips (${selectedItems.size} selected)", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.White)
             Spacer(modifier = Modifier.height(8.dp))
 
             LazyVerticalGrid(
@@ -200,7 +247,13 @@ fun VideoImportScreen(
                                     }
                                 }
 
-                                Text(item.title, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                                Text(
+                                    text = item.title,
+                                    color = Color.White,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    maxLines = 1
+                                )
                             }
                         }
                     }
@@ -211,7 +264,9 @@ fun VideoImportScreen(
 
             Button(
                 onClick = {
-                    onCreateProject(projectTitle.ifBlank { "CapRwanda Project" }, selectedAspectRatio)
+                    val selectedList = mediaGallery.filter { selectedItems.contains(it.id) }
+                    val itemsToSend = selectedList.map { Triple(it.uri, it.title, it.isImage) }
+                    onCreateProject(projectTitle.ifBlank { "CapRwanda Project" }, selectedAspectRatio, itemsToSend)
                 },
                 enabled = selectedItems.isNotEmpty(),
                 colors = ButtonDefaults.buttonColors(containerColor = CyanAccent),

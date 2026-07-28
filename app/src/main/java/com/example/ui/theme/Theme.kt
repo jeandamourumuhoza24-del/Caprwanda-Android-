@@ -5,12 +5,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.graphics.Color
-
-object AppThemeState {
-    val isDarkMode = mutableStateOf(true)
-}
 
 private val CapDarkColorScheme = darkColorScheme(
     primary = PurpleAccent,

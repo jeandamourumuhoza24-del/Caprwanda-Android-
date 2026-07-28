@@ -71,10 +71,5 @@ data class ClipEntity(
     val chromaKeyColorHex: String = "#00FF00", // Green screen
     val chromaKeyTolerance: Float = 0.3f,
     val isAiAutoCaption: Boolean = false,
-    val objectRemovalMask: String = "", // Serialized points for object removal
-
-    // Background replacement
-    val bgType: String = "color", // "color" or "image"
-    val bgColorHex: String = "#000000",
-    val bgImageUri: String = ""
+    val objectRemovalMask: String = "" // Serialized points for object removal
 )

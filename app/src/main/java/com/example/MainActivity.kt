@@ -16,7 +16,8 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            CapRwandaTheme(darkTheme = true) {
+            val isDark = com.example.ui.theme.AppThemeState.isDarkMode.value
+            CapRwandaTheme(darkTheme = isDark) {
                 Surface(modifier = Modifier.fillMaxSize()) {
                     val navController = rememberNavController()
                     CapRwandaNavGraph(navController = navController)

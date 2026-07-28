@@ -84,7 +84,7 @@ fun VideoPreviewPlayer(
                 val canvasHeight = size.height
 
                 // Background grade color based on active filter
-                val filterColor = when (activeVideoClip?.filterName) {
+                var filterColor = when (activeVideoClip?.filterName) {
                     "Cinematic" -> Color(0xFF0F172A)
                     "Rwandan Dawn" -> Color(0xFF451A03)
                     "Vibrant" -> Color(0xFF064E3B)
@@ -94,7 +94,47 @@ fun VideoPreviewPlayer(
                     else -> Color(0xFF1E293B)
                 }
 
+                // If AI BG removal is enabled, replace background with color or pattern
+                if (activeVideoClip?.isAiBgRemoved == true) {
+                    if (activeVideoClip.bgType == "color") {
+                        filterColor = try {
+                            Color(android.graphics.Color.parseColor(activeVideoClip.bgColorHex))
+                        } catch (e: Exception) {
+                            Color.Black
+                        }
+                    } else {
+                        // Replaced background image: determine gradient colors based on image name
+                        filterColor = when (activeVideoClip.bgImageUri) {
+                            "kigali_sunset_bg.jpg" -> Color(0xFFEA580C) // Sunset orange
+                            "lake_kivu_bg.jpg" -> Color(0xFF0284C7) // Sky blue
+                            "nyungwe_forest_bg.jpg" -> Color(0xFF065F46) // Forest green
+                            "volcanoes_park_bg.jpg" -> Color(0xFF1E293B) // Mountain slate
+                            else -> Color(0xFF1E1B4B)
+                        }
+                    }
+                }
+
                 drawRect(color = filterColor)
+
+                // Draw a visual image background element if bgType is image and AI is active
+                if (activeVideoClip?.isAiBgRemoved == true && activeVideoClip.bgType == "image") {
+                    if (activeVideoClip.bgImageUri == "kigali_sunset_bg.jpg") {
+                        // Draw sunset sun in background
+                        drawCircle(
+                            color = Color(0xFFF59E0B),
+                            radius = canvasWidth * 0.15f,
+                            center = androidx.compose.ui.geometry.Offset(canvasWidth * 0.8f, canvasHeight * 0.25f)
+                        )
+                    } else if (activeVideoClip.bgImageUri == "lake_kivu_bg.jpg") {
+                        // Draw water ripples in background
+                        drawLine(
+                            color = Color.White.copy(alpha = 0.5f),
+                            start = androidx.compose.ui.geometry.Offset(0f, canvasHeight * 0.3f),
+                            end = androidx.compose.ui.geometry.Offset(canvasWidth, canvasHeight * 0.3f),
+                            strokeWidth = 4f
+                        )
+                    }
+                }
 
                 // Simulated video frame subject (mountains/hills of Rwanda)
                 drawCircle(

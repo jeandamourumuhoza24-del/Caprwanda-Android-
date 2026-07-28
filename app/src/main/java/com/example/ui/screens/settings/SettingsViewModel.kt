@@ -16,7 +16,7 @@ enum class AppLanguage(val code: String, val displayName: String) {
 
 class SettingsViewModel : ViewModel() {
 
-    private val _isDarkMode = MutableStateFlow(true)
+    private val _isDarkMode = MutableStateFlow(com.example.ui.theme.AppThemeState.isDarkMode.value)
     val isDarkMode: StateFlow<Boolean> = _isDarkMode.asStateFlow()
 
     private val _selectedLanguage = MutableStateFlow(AppLanguage.ENGLISH)
@@ -33,6 +33,7 @@ class SettingsViewModel : ViewModel() {
 
     fun toggleDarkMode(enabled: Boolean) {
         _isDarkMode.value = enabled
+        com.example.ui.theme.AppThemeState.isDarkMode.value = enabled
     }
 
     fun setLanguage(language: AppLanguage) {

@@ -2,11 +2,15 @@ package com.example.ui.screens.editor.sheets
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ColorLens
+import androidx.compose.material.icons.filled.Image
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.PersonRemove
 import androidx.compose.material.icons.filled.Subtitles
 import androidx.compose.material3.*
@@ -18,6 +22,7 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.local.entities.ClipEntity
 import com.example.domain.engine.AiFeaturesEngine
 import com.example.ui.theme.CyanAccent
 import com.example.ui.theme.RwandaGold
@@ -26,14 +31,32 @@ import com.example.ui.theme.SlateDarkSurface
 
 @Composable
 fun AiToolsSheet(
+    clip: ClipEntity?,
     isAiLoading: Boolean,
     aiStatusMessage: String,
     onRunAutoCaptions: (AiFeaturesEngine.SubtitleLanguage) -> Unit,
     onToggleBgRemoval: () -> Unit,
     onToggleChromaKey: (String) -> Unit,
+    onUpdateBackground: (bgType: String, bgColorHex: String, bgImageUri: String) -> Unit,
     onClose: () -> Unit
 ) {
     var selectedLang by remember { mutableStateOf(AiFeaturesEngine.SubtitleLanguage.KINYARWANDA) }
+
+    val colorsPalette = listOf(
+        "#000000" to "Black",
+        "#1E3A8A" to "Blue",
+        "#047857" to "Green",
+        "#B91C1C" to "Red",
+        "#6D28D9" to "Purple",
+        "#F59E0B" to "Amber"
+    )
+
+    val imagesPalette = listOf(
+        "kigali_sunset_bg.jpg" to "Kigali Sunset",
+        "lake_kivu_bg.jpg" to "Lake Kivu",
+        "nyungwe_forest_bg.jpg" to "Nyungwe",
+        "volcanoes_park_bg.jpg" to "Volcanoes"
+    )
 
     Surface(
         color = SlateDarkCard,
@@ -142,7 +165,12 @@ fun AiToolsSheet(
                             onClick = onToggleBgRemoval,
                             colors = ButtonDefaults.buttonColors(containerColor = CyanAccent)
                         ) {
-                            Text("Apply", color = Color.Black, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text(
+                                text = if (clip?.isAiBgRemoved == true) "Disable" else "Apply",
+                                color = Color.Black,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     }
                 }
@@ -165,7 +193,95 @@ fun AiToolsSheet(
                             onClick = { onToggleChromaKey("#00FF00") },
                             colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981))
                         ) {
-                            Text("Green Key", color = Color.Black, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                            Text(
+                                text = if (clip?.isChromaKeyEnabled == true) "Disable" else "Green Key",
+                                color = Color.Black,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // 3. Replace Background Section (Image or Color)
+            if (clip != null) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = SlateDarkSurface),
+                    shape = RoundedCornerShape(16.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(modifier = Modifier.padding(12.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Default.Palette, contentDescription = null, tint = CyanAccent)
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Replace Background (AI Cutout Required)", fontWeight = FontWeight.Bold, color = Color.White, fontSize = 14.sp)
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // Toggle Mode: Color vs Image
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            FilterChip(
+                                selected = clip.bgType == "color",
+                                onClick = { onUpdateBackground("color", clip.bgColorHex, clip.bgImageUri) },
+                                label = { Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.ColorLens, contentDescription = null, modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Solid Color")
+                                }}
+                            )
+                            FilterChip(
+                                selected = clip.bgType == "image",
+                                onClick = { onUpdateBackground("image", clip.bgColorHex, clip.bgImageUri.ifEmpty { "kigali_sunset_bg.jpg" }) },
+                                label = { Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.Image, contentDescription = null, modifier = Modifier.size(14.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Image Backdrop")
+                                }}
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        if (clip.bgType == "color") {
+                            // Render solid color options
+                            Text("Select Backdrop Color", color = Color.Gray, fontSize = 12.sp)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                items(colorsPalette) { (hex, name) ->
+                                    val isSelected = clip.bgColorHex.lowercase() == hex.lowercase()
+                                    FilterChip(
+                                        selected = isSelected,
+                                        onClick = { onUpdateBackground("color", hex, clip.bgImageUri) },
+                                        label = { Text(name) },
+                                        colors = FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = CyanAccent,
+                                            selectedLabelColor = Color.Black
+                                        )
+                                    )
+                                }
+                            }
+                        } else {
+                            // Render image backdrop options
+                            Text("Select Backdrop Image", color = Color.Gray, fontSize = 12.sp)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                items(imagesPalette) { (uri, name) ->
+                                    val isSelected = clip.bgImageUri == uri
+                                    FilterChip(
+                                        selected = isSelected,
+                                        onClick = { onUpdateBackground("image", clip.bgColorHex, uri) },
+                                        label = { Text(name) },
+                                        colors = FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = RwandaGold,
+                                            selectedLabelColor = Color.Black
+                                        )
+                                    )
+                                }
+                            }
                         }
                     }
                 }

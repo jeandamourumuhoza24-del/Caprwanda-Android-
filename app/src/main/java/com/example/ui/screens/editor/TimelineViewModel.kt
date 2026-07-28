@@ -127,24 +127,6 @@ class TimelineViewModel(
         }
     }
 
-    fun updateClipCrop(clip: ClipEntity, x: Float, y: Float, w: Float, h: Float) {
-        viewModelScope.launch {
-            repository.updateClip(clip.copy(cropX = x, cropY = y, cropWidth = w, cropHeight = h))
-        }
-    }
-
-    fun updateClipTrim(clip: ClipEntity, startMs: Long, endMs: Long) {
-        viewModelScope.launch {
-            repository.updateClip(clip.copy(startTimeMs = startMs, endTimeMs = endMs))
-        }
-    }
-
-    fun updateClipBackground(clip: ClipEntity, bgType: String, bgColorHex: String, bgImageUri: String) {
-        viewModelScope.launch {
-            repository.updateClip(clip.copy(bgType = bgType, bgColorHex = bgColorHex, bgImageUri = bgImageUri))
-        }
-    }
-
     fun toggleReverseClip(clip: ClipEntity) {
         viewModelScope.launch {
             repository.updateClip(clip.copy(isReversed = !clip.isReversed))

@@ -66,18 +66,6 @@ object VideoProcessingEngine {
         }
 
         val outputFilename = "CapRwanda_${title.lowercase().replace(" ", "_")}_$resolution.mp4"
-        val path = "/storage/emulated/0/Movies"
-        try {
-            val dir = java.io.File(path)
-            if (!dir.exists()) {
-                dir.mkdirs()
-            }
-            val file = java.io.File(dir, outputFilename)
-            file.writeText("Simulated CapRwanda MP4 Video Content at $resolution resolution")
-        } catch (e: Exception) {
-            // Gracefully ignore since it's sandbox / simulated
-        }
-
         emit(
             ExportProgressState(
                 isExporting = false,
@@ -85,7 +73,7 @@ object VideoProcessingEngine {
                 currentFrame = totalFrames,
                 totalFrames = totalFrames,
                 timeRemainingSeconds = 0,
-                exportedFileUri = "$path/$outputFilename",
+                exportedFileUri = "/storage/emulated/0/Movies/$outputFilename",
                 isCompleted = true
             )
         )

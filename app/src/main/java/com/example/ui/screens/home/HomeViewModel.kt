@@ -5,13 +5,10 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.example.data.local.entities.ProjectEntity
 import com.example.data.local.entities.TemplateEntity
-import com.example.data.local.entities.ClipEntity
-import com.example.data.local.entities.TrackType
 import com.example.data.repository.VideoProjectRepository
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 class HomeViewModel(
@@ -38,44 +35,9 @@ class HomeViewModel(
         }
     }
 
-    fun createProject(
-        title: String,
-        aspectRatio: String = "9:16",
-        mediaItems: List<com.example.ui.screens.import.ImportMediaItem> = emptyList(),
-        onCreated: (Long) -> Unit
-    ) {
+    fun createProject(title: String, onCreated: (Long) -> Unit) {
         viewModelScope.launch {
-            val projectId = repository.createNewProject(title = title, aspectRatio = aspectRatio)
-            if (mediaItems.isNotEmpty()) {
-                // Get the default sample clip and delete it
-                try {
-                    val defaultClips = repository.getClipsForProject(projectId).first()
-                    for (clip in defaultClips) {
-                        repository.deleteClip(clip.id)
-                    }
-                } catch (e: Exception) {
-                    // Ignore flow exceptions
-                }
-                var currentStartTime = 0L
-                for (item in mediaItems) {
-                    val isPhoto = item.uri.endsWith(".png") || item.uri.endsWith(".jpg") || item.uri.endsWith(".jpeg") || item.title.lowercase().contains("photo") || item.title.lowercase().contains("image") || item.uri.contains("image")
-                    val duration = if (isPhoto) 4000L else 5000L
-
-                    val clip = ClipEntity(
-                        projectId = projectId,
-                        trackType = TrackType.VIDEO,
-                        trackIndex = 0,
-                        mediaUri = item.uri,
-                        title = item.title,
-                        startTimeMs = currentStartTime,
-                        endTimeMs = currentStartTime + duration,
-                        sourceTrimStartMs = 0,
-                        sourceTrimEndMs = duration
-                    )
-                    repository.addClip(clip)
-                    currentStartTime += duration
-                }
-            }
+            val projectId = repository.createNewProject(title = title)
             onCreated(projectId)
         }
     }

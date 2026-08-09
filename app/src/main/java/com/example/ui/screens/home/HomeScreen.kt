@@ -3,10 +3,8 @@ package com.example.ui.screens.home
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -21,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -45,6 +44,13 @@ fun HomeScreen(
     val recentProjects by viewModel.recentProjects.collectAsStateWithLifecycle()
     val templates by viewModel.templates.collectAsStateWithLifecycle()
 
+    val configuration = LocalConfiguration.current
+    val screenWidth = configuration.screenWidthDp
+    val columns = if (screenWidth > 600) 3 else 2
+    val projectChunks = remember(recentProjects, columns) {
+        recentProjects.chunked(columns)
+    }
+
     Scaffold(
         topBar = {
             CapRwandaTopBar(
@@ -67,134 +73,150 @@ fun HomeScreen(
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
-                .padding(horizontal = 16.dp)
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(bottom = 80.dp)
         ) {
-            Spacer(modifier = Modifier.height(8.dp))
+            item {
+                Spacer(modifier = Modifier.height(8.dp))
+            }
 
             // Create New Project Hero Card
-            Card(
-                colors = CardDefaults.cardColors(containerColor = SlateDarkCard),
-                shape = RoundedCornerShape(20.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(110.dp)
-                    .clickable { onNavigateToImport() }
-                    .testTag("new_project_card")
-            ) {
-                Row(
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = SlateDarkCard),
+                    shape = RoundedCornerShape(20.dp),
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        .fillMaxWidth()
+                        .heightIn(min = 100.dp, max = 130.dp)
+                        .clickable { onNavigateToImport() }
+                        .testTag("new_project_card")
                 ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = "Start Video Project",
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "Import video clips, add AI captions & 4K filters",
-                            fontSize = 12.sp,
-                            color = Color.Gray
-                        )
-                    }
-
-                    Surface(
-                        shape = RoundedCornerShape(14.dp),
-                        color = CyanAccent,
-                        modifier = Modifier.size(52.dp)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = "New Project",
-                                tint = Color.Black,
-                                modifier = Modifier.size(32.dp)
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Start Video Project",
+                                fontSize = 20.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color.White
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            Text(
+                                text = "Import video clips, add AI captions & 4K filters",
+                                fontSize = 12.sp,
+                                color = Color.Gray
+                            )
+                        }
+
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = CyanAccent,
+                            modifier = Modifier.size(52.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = "New Project",
+                                    tint = Color.Black,
+                                    modifier = Modifier.size(32.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Rwandan Trending Templates Carousel
+            item {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        text = "Trending Rwanda Templates",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    LazyRow(
+                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        items(templates, key = { it.id }) { template ->
+                            TemplateItemCard(
+                                template = template,
+                                onClick = {
+                                    viewModel.createProject(title = template.title) { newProjectId ->
+                                        onNavigateToEditor(newProjectId)
+                                    }
+                                }
                             )
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // Rwandan Trending Templates Carousel
-            Text(
-                text = "Trending Rwanda Templates",
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
-            LazyRow(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                items(templates, key = { it.id }) { template ->
-                    TemplateItemCard(
-                        template = template,
-                        onClick = {
-                            viewModel.createProject(title = template.title) { newProjectId ->
-                                onNavigateToEditor(newProjectId)
-                            }
-                        }
-                    )
-                }
+            // Recent Projects Grid
+            item {
+                Text(
+                    text = "Recent Projects",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
             }
 
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // Recent Projects Grid
-            Text(
-                text = "Recent Projects",
-                fontWeight = FontWeight.Bold,
-                fontSize = 16.sp,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-
             if (recentProjects.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(140.dp)
-                        .clip(RoundedCornerShape(16.dp))
-                        .background(SlateDarkSurface),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            imageVector = Icons.Default.Movie,
-                            contentDescription = null,
-                            tint = Color.Gray,
-                            modifier = Modifier.size(36.dp)
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text("No projects yet. Tap 'New Project' to create one!", color = Color.Gray, fontSize = 13.sp)
+                item {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(140.dp)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(SlateDarkSurface),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                imageVector = Icons.Default.Movie,
+                                contentDescription = null,
+                                tint = Color.Gray,
+                                modifier = Modifier.size(36.dp)
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("No projects yet. Tap 'New Project' to create one!", color = Color.Gray, fontSize = 13.sp)
+                        }
                     }
                 }
             } else {
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    items(recentProjects, key = { it.id }) { project ->
-                        ProjectItemCard(
-                            project = project,
-                            onClick = { onNavigateToEditor(project.id) },
-                            onDelete = { viewModel.deleteProject(project.id) }
-                        )
+                items(projectChunks) { chunk ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        chunk.forEach { project ->
+                            Box(modifier = Modifier.weight(1f)) {
+                                ProjectItemCard(
+                                    project = project,
+                                    onClick = { onNavigateToEditor(project.id) },
+                                    onDelete = { viewModel.deleteProject(project.id) }
+                                )
+                            }
+                        }
+                        if (chunk.size < columns) {
+                            repeat(columns - chunk.size) {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
+                        }
                     }
                 }
             }

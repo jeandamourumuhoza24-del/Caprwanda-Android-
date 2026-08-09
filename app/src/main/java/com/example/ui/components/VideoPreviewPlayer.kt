@@ -60,7 +60,7 @@ fun VideoPreviewPlayer(
         it.trackType == TrackType.STICKER && currentPositionMs >= it.startTimeMs && currentPositionMs <= it.endTimeMs
     }
 
-    Box(
+    BoxWithConstraints(
         modifier = modifier
             .fillMaxWidth()
             .padding(12.dp)
@@ -69,10 +69,19 @@ fun VideoPreviewPlayer(
             .border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(16.dp)),
         contentAlignment = Alignment.Center
     ) {
+        val maxW = maxWidth
+        val maxH = maxHeight
+
+        val fitWidth = if (maxW / aspectValue <= maxH) {
+            maxW * 0.95f
+        } else {
+            maxH * 0.85f * aspectValue
+        }
+        val fitHeight = fitWidth / aspectValue
+
         Box(
             modifier = Modifier
-                .aspectRatio(aspectValue)
-                .fillMaxHeight(0.85f)
+                .size(width = fitWidth, height = fitHeight)
                 .clip(RoundedCornerShape(12.dp))
                 .background(SlateDarkCard)
                 .clickable { onTogglePlayPause() },

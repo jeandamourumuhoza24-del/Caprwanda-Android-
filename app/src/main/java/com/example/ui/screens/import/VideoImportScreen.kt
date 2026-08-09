@@ -13,10 +13,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -25,9 +27,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -75,6 +80,17 @@ fun VideoImportScreen(
     var isCameraOverlayVisible by remember { mutableStateOf(false) }
     var isRecordingVideo by remember { mutableStateOf(false) }
     var recordingTimerSeconds by remember { mutableStateOf(0) }
+
+    // Screen dimension checks for responsiveness
+    val configuration = LocalConfiguration.current
+    val screenWidth = configuration.screenWidthDp
+    val screenHeight = configuration.screenHeightDp
+    val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+
+    val columns = if (screenWidth > 600) 3 else 2
+    val galleryChunks = remember(mediaGallery, columns) {
+        mediaGallery.chunked(columns)
+    }
 
     // Handlers for Permissions
     val requiredPermissions = remember {
@@ -192,217 +208,261 @@ fun VideoImportScreen(
         containerColor = MaterialTheme.colorScheme.background
     ) { innerPadding ->
         Box(modifier = Modifier.fillMaxSize()) {
-            Column(
+            LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    .padding(16.dp)
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                contentPadding = PaddingValues(bottom = 80.dp)
             ) {
-                OutlinedTextField(
-                    value = projectTitle,
-                    onValueChange = { projectTitle = it },
-                    label = { Text("Project Title") },
-                    singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = CyanAccent,
-                        focusedLabelColor = CyanAccent
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("project_title_input")
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text("Canvas Aspect Ratio", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onBackground)
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    aspectRatios.forEach { ratio ->
-                        val isSelected = selectedAspectRatio == ratio
-                        FilterChip(
-                            selected = isSelected,
-                            onClick = { selectedAspectRatio = ratio },
-                            label = { Text(ratio, fontWeight = FontWeight.Bold) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                selectedContainerColor = CyanAccent,
-                                selectedLabelColor = Color.Black
-                            )
-                        )
-                    }
+                item {
+                    Spacer(modifier = Modifier.height(8.dp))
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Import options selectors (Gallery vs Camera etc)
-                Text("Select Media Source", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onBackground)
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    // Import Video button
-                    Button(
-                        onClick = {
-                            checkAndRequestPermissions {
-                                videoPickerLauncher.launch("video/*")
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = SlateDarkSurface),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(Icons.Default.VideoLibrary, contentDescription = null, tint = CyanAccent)
-                            Text("Video", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                        }
-                    }
-
-                    // Import Photo button
-                    Button(
-                        onClick = {
-                            checkAndRequestPermissions {
-                                photoPickerLauncher.launch("image/*")
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = SlateDarkSurface),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(Icons.Default.Photo, contentDescription = null, tint = RwandaGold)
-                            Text("Photo", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                        }
-                    }
-
-                    // Import Audio button
-                    Button(
-                        onClick = {
-                            checkAndRequestPermissions {
-                                audioPickerLauncher.launch("audio/*")
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = SlateDarkSurface),
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(Icons.Default.Audiotrack, contentDescription = null, tint = Color(0xFF10B981))
-                            Text("Audio", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                        }
-                    }
-
-                    // Camera recording button
-                    Button(
-                        onClick = {
-                            checkAndRequestPermissions {
-                                isCameraOverlayVisible = true
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = SlateDarkSurface),
-                        modifier = Modifier.weight(1.5f)
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(Icons.Default.CameraAlt, contentDescription = null, tint = MaterialTheme.colorScheme.error)
-                            Text("Camera Rec", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
-                        }
-                    }
+                // Project Title Textfield
+                item {
+                    OutlinedTextField(
+                        value = projectTitle,
+                        onValueChange = { projectTitle = it },
+                        label = { Text("Project Title") },
+                        singleLine = true,
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = CyanAccent,
+                            focusedLabelColor = CyanAccent
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .testTag("project_title_input")
+                    )
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                // Canvas Aspect Ratio chips
+                item {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Text("Canvas Aspect Ratio", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onBackground)
+                        Spacer(modifier = Modifier.height(8.dp))
 
-                Text(
-                    text = "Import Selection (${selectedItems.size} selected)",
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp,
-                    color = MaterialTheme.colorScheme.onBackground
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-
-                LazyVerticalGrid(
-                    columns = GridCells.Fixed(2),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    items(mediaGallery, key = { it.id }) { item ->
-                        val isSelected = selectedItems.contains(item.id)
-                        Card(
-                            colors = CardDefaults.cardColors(containerColor = SlateDarkCard),
-                            shape = RoundedCornerShape(14.dp),
-                            modifier = Modifier
-                                .height(110.dp)
-                                .border(
-                                    width = if (isSelected) 2.dp else 0.dp,
-                                    color = if (isSelected) CyanAccent else Color.Transparent,
-                                    shape = RoundedCornerShape(14.dp)
+                        // Scrollable chip row for small screen safety
+                        LazyRow(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            items(aspectRatios) { ratio ->
+                                val isSelected = selectedAspectRatio == ratio
+                                FilterChip(
+                                    selected = isSelected,
+                                    onClick = { selectedAspectRatio = ratio },
+                                    label = { Text(ratio, fontWeight = FontWeight.Bold) },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = CyanAccent,
+                                        selectedLabelColor = Color.Black
+                                    )
                                 )
-                                .clickable {
-                                    selectedItems = if (isSelected) {
-                                        selectedItems - item.id
-                                    } else {
-                                        selectedItems + item.id
+                            }
+                        }
+                    }
+                }
+
+                // Select Media Source button row / grid (responsively scaled)
+                item {
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Text("Select Media Source", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = MaterialTheme.colorScheme.onBackground)
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Horizontally scrollable row on very narrow screens, otherwise dynamic spacing
+                        LazyRow(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            item {
+                                Button(
+                                    onClick = {
+                                        checkAndRequestPermissions {
+                                            videoPickerLauncher.launch("video/*")
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = SlateDarkSurface),
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                                    modifier = Modifier.widthIn(min = 72.dp)
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Icon(Icons.Default.VideoLibrary, contentDescription = null, tint = CyanAccent)
+                                        Text("Video", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
                                     }
                                 }
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .padding(10.dp)
-                            ) {
-                                Column(
-                                    modifier = Modifier.fillMaxSize(),
-                                    verticalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Row(
-                                        modifier = Modifier.fillMaxWidth(),
-                                        horizontalArrangement = Arrangement.SpaceBetween,
-                                        verticalAlignment = Alignment.CenterVertically
-                                    ) {
-                                        Surface(
-                                            color = Color.Black.copy(alpha = 0.6f),
-                                            shape = RoundedCornerShape(6.dp)
-                                        ) {
-                                            Text(
-                                                text = item.durationText,
-                                                color = Color.White,
-                                                fontSize = 10.sp,
-                                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
-                                            )
-                                        }
+                            }
 
-                                        if (isSelected) {
+                            item {
+                                Button(
+                                    onClick = {
+                                        checkAndRequestPermissions {
+                                            photoPickerLauncher.launch("image/*")
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = SlateDarkSurface),
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                                    modifier = Modifier.widthIn(min = 72.dp)
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Icon(Icons.Default.Photo, contentDescription = null, tint = RwandaGold)
+                                        Text("Photo", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                    }
+                                }
+                            }
+
+                            item {
+                                Button(
+                                    onClick = {
+                                        checkAndRequestPermissions {
+                                            audioPickerLauncher.launch("audio/*")
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = SlateDarkSurface),
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                                    modifier = Modifier.widthIn(min = 72.dp)
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Icon(Icons.Default.Audiotrack, contentDescription = null, tint = Color(0xFF10B981))
+                                        Text("Audio", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                    }
+                                }
+                            }
+
+                            item {
+                                Button(
+                                    onClick = {
+                                        checkAndRequestPermissions {
+                                            isCameraOverlayVisible = true
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(containerColor = SlateDarkSurface),
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+                                    modifier = Modifier.widthIn(min = 100.dp)
+                                ) {
+                                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                        Icon(Icons.Default.CameraAlt, contentDescription = null, tint = MaterialTheme.colorScheme.error)
+                                        Text("Camera Rec", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color.White)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Import selection header
+                item {
+                    Text(
+                        text = "Import Selection (${selectedItems.size} selected)",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.onBackground
+                    )
+                }
+
+                // Responsive chunk-based grid gallery
+                items(galleryChunks) { chunk ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        chunk.forEach { item ->
+                            val isSelected = selectedItems.contains(item.id)
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = SlateDarkCard),
+                                shape = RoundedCornerShape(14.dp),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(110.dp)
+                                    .border(
+                                        width = if (isSelected) 2.dp else 0.dp,
+                                        color = if (isSelected) CyanAccent else Color.Transparent,
+                                        shape = RoundedCornerShape(14.dp)
+                                    )
+                                    .clickable {
+                                        selectedItems = if (isSelected) {
+                                            selectedItems - item.id
+                                        } else {
+                                            selectedItems + item.id
+                                        }
+                                    }
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .padding(10.dp)
+                                ) {
+                                    Column(
+                                        modifier = Modifier.fillMaxSize(),
+                                        verticalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            horizontalArrangement = Arrangement.SpaceBetween,
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
                                             Surface(
-                                                shape = RoundedCornerShape(12.dp),
-                                                color = CyanAccent,
-                                                modifier = Modifier.size(20.dp)
+                                                color = Color.Black.copy(alpha = 0.6f),
+                                                shape = RoundedCornerShape(6.dp)
                                             ) {
-                                                Icon(
-                                                    Icons.Default.Check,
-                                                    contentDescription = null,
-                                                    tint = Color.Black,
-                                                    modifier = Modifier.size(14.dp)
+                                                Text(
+                                                    text = item.durationText,
+                                                    color = Color.White,
+                                                    fontSize = 10.sp,
+                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                                 )
                                             }
-                                        }
-                                    }
 
-                                    Text(
-                                        text = item.title,
-                                        color = Color.White,
-                                        fontSize = 12.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        maxLines = 2
-                                    )
+                                            if (isSelected) {
+                                                Surface(
+                                                    shape = RoundedCornerShape(12.dp),
+                                                    color = CyanAccent,
+                                                    modifier = Modifier.size(20.dp)
+                                                ) {
+                                                    Icon(
+                                                        Icons.Default.Check,
+                                                        contentDescription = null,
+                                                        tint = Color.Black,
+                                                        modifier = Modifier.size(14.dp)
+                                                    )
+                                                }
+                                            }
+                                        }
+
+                                        Text(
+                                            text = item.title,
+                                            color = Color.White,
+                                            fontSize = 12.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
                                 }
+                            }
+                        }
+                        // Fill extra spaces if the last chunk is not full
+                        if (chunk.size < columns) {
+                            repeat(columns - chunk.size) {
+                                Spacer(modifier = Modifier.weight(1f))
                             }
                         }
                     }
                 }
+            }
 
-                Spacer(modifier = Modifier.height(12.dp))
-
+            // Start Editing floating action bar at bottom of import view
+            Box(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .fillMaxWidth()
+                    .background(
+                        brush = Brush.verticalGradient(
+                            colors = listOf(Color.Transparent, MaterialTheme.colorScheme.background.copy(alpha = 0.95f))
+                        )
+                    )
+                    .padding(16.dp)
+            ) {
                 Button(
                     onClick = {
                         val selectedMediaList = mediaGallery.filter { selectedItems.contains(it.id) }
@@ -424,7 +484,7 @@ fun VideoImportScreen(
                 }
             }
 
-            // Beautiful Custom Simulated Camera Recorder Overlay
+            // Beautiful Custom Simulated Camera Recorder Overlay (Responsively Wrapped)
             AnimatedVisibility(
                 visible = isCameraOverlayVisible,
                 modifier = Modifier.align(Alignment.Center)
@@ -436,10 +496,12 @@ fun VideoImportScreen(
                         .padding(16.dp),
                     contentAlignment = Alignment.Center
                 ) {
+                    // Fully scrollable layout to handle extremely small/landscape screen heights perfectly
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.SpaceBetween,
-                        modifier = Modifier.fillMaxSize()
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .verticalScroll(rememberScrollState())
                     ) {
                         // Top Bar
                         Row(
@@ -466,29 +528,32 @@ fun VideoImportScreen(
                             }
                         }
 
-                        // Simulated Live Stream Viewport
+                        // Simulated Live Stream Viewport (Height-scaled responsibly)
                         Box(
                             modifier = Modifier
-                                .weight(1f)
                                 .fillMaxWidth()
+                                .heightIn(min = 160.dp, max = 320.dp)
                                 .clip(RoundedCornerShape(16.dp))
                                 .background(SlateDarkSurface)
                                 .border(2.dp, if (isRecordingVideo) Color.Red else Color.Gray, RoundedCornerShape(16.dp)),
                             contentAlignment = Alignment.Center
                         ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.padding(16.dp)
+                            ) {
                                 Icon(
                                     Icons.Default.Videocam,
                                     contentDescription = null,
                                     tint = if (isRecordingVideo) Color.Red else Color.White,
-                                    modifier = Modifier.size(64.dp)
+                                    modifier = Modifier.size(48.dp)
                                 )
-                                Spacer(modifier = Modifier.height(12.dp))
+                                Spacer(modifier = Modifier.height(8.dp))
                                 Text(
                                     text = if (isRecordingVideo) "RECORDING: ${recordingTimerSeconds}s" else "READY TO RECORD",
                                     color = Color.White,
                                     fontWeight = FontWeight.Bold,
-                                    fontSize = 16.sp
+                                    fontSize = 15.sp
                                 )
                                 if (isRecordingVideo) {
                                     Row(
@@ -508,11 +573,13 @@ fun VideoImportScreen(
                             }
                         }
 
+                        Spacer(modifier = Modifier.height(16.dp))
+
                         // Control Buttons
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 24.dp),
+                                .padding(vertical = 16.dp),
                             horizontalArrangement = Arrangement.Center,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
@@ -522,7 +589,7 @@ fun VideoImportScreen(
                                     colors = ButtonDefaults.buttonColors(containerColor = Color.Red),
                                     shape = RoundedCornerShape(32.dp),
                                     modifier = Modifier
-                                        .size(72.dp)
+                                        .size(64.dp)
                                         .border(2.dp, Color.White, RoundedCornerShape(32.dp))
                                 ) {
                                     Icon(Icons.Default.PlayArrow, contentDescription = "Start Recording", tint = Color.White)
@@ -546,7 +613,7 @@ fun VideoImportScreen(
                                     colors = ButtonDefaults.buttonColors(containerColor = Color.White),
                                     shape = RoundedCornerShape(32.dp),
                                     modifier = Modifier
-                                        .size(72.dp)
+                                        .size(64.dp)
                                         .border(2.dp, Color.Red, RoundedCornerShape(32.dp))
                                 ) {
                                     Icon(Icons.Default.Stop, contentDescription = "Stop Recording", tint = Color.Red)

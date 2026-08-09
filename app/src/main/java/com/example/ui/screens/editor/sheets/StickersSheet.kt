@@ -4,14 +4,14 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,6 +33,11 @@ fun StickersSheet(
         "🎶", "⛰️", "🌊", "💯", "🎉", "⚡", "🌟", "🤩"
     )
 
+    val cols = 4
+    val symbolChunks = remember(stickerSymbols) {
+        stickerSymbols.chunked(cols)
+    }
+
     Surface(
         color = SlateDarkCard,
         shape = RoundedCornerShape(topStart = 24.dp, topEnd = 24.dp),
@@ -43,6 +48,7 @@ fun StickersSheet(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
             Row(
@@ -63,25 +69,36 @@ fun StickersSheet(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(4),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp),
-                modifier = Modifier.fillMaxWidth()
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                items(stickerSymbols) { symbol ->
-                    Box(
-                        modifier = Modifier
-                            .aspectRatio(1f)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(SlateDarkSurface)
-                            .clickable {
-                                onSelectSticker(symbol)
-                                onClose()
-                            },
-                        contentAlignment = Alignment.Center
+                symbolChunks.forEach { chunk ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        Text(symbol, fontSize = 28.sp)
+                        chunk.forEach { symbol ->
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .aspectRatio(1f)
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(SlateDarkSurface)
+                                    .clickable {
+                                        onSelectSticker(symbol)
+                                        onClose()
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(symbol, fontSize = 28.sp)
+                            }
+                        }
+                        if (chunk.size < cols) {
+                            repeat(cols - chunk.size) {
+                                Spacer(modifier = Modifier.weight(1f))
+                            }
+                        }
                     }
                 }
             }
